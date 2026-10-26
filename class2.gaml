@@ -72,8 +72,23 @@ species zebra skills: [moving] {
         do wander;
     }
     
+    // 行为：斑马吃草
+    reflex eat {
+        // 获取斑马当前所处位置的草地网格单元
+        grassland current_cell <- grassland(location);
+        
+        // 如果该网格存在，且网格中的生物量大于0（有草）
+        if (current_cell != nil and current_cell.biomass > 0) {
+            // 触发草被吃掉的逻辑：将该网格的生物量重置为0（无草状态）
+            current_cell.biomass <- 0.0;
+            
+            // （可选）可以立即更新一下该网格的颜色为黑色，使其视觉反馈更及时
+            // 不加这句的话，草地的 grow reflex 也会在当前或下一帧自动更新颜色
+//            current_cell.color <- rgb(0, 0, 0); 
+        }
+    }
+    
     aspect base {
-        // 修改为尺寸为 2 的灰色三角形
         draw triangle(2) color: #gray border: #black;
     }
 }
