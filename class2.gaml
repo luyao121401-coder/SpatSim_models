@@ -17,52 +17,58 @@ grid grassland width: 50 height: 50 {
     // Initial biomass randomly generated between 0.0 and 10.0
     float biomass <- rnd(0.0, 10.0);
     
-    // 初始化颜色（后续会在reflex中动态更新）
+    // 初始化颜色
     rgb color <- rgb(0, int(255 * (biomass / 10.0)), 0);
     
     // 环境与规则：草地的生长行为，每次循环都会执行
     reflex grow {
-        // 每次循环生物量自动增加0.1
         biomass <- biomass + 0.1;
         
-        // 最高上限为10.0
         if (biomass > 10.0) {
             biomass <- 10.0;
         }        
-        // 动态更新颜色：生物量数值越高，绿色通道的值越接近255，网格颜色越绿
         color <- rgb(0, int(255 * (biomass / 10.0)), 0);
     }
 }
 
 // 添加 moving 技能，使智能体能够移动
 species lion skills: [moving] {
-    // Random initial location
+    // 新增：狮子的初始能量（在30到50之间随机）
+    int energy <- rnd(2000, 3500);
+    
     init {
         location <- any_location_in(world);
     }
     
-    // 行为：在网格内随机游走
+    // 行为：在网格内随机游走，并消耗能量
     reflex move {
         do wander;
+        // 每次移动后能量减 1
+        energy <- energy - 1;
     }
     
     // 行为：自动捕杀距离1以内所有的斑马
     reflex hunt {
-        // 找到距离自身 1 范围内的所有斑马，并让它们死亡（do die）
         ask zebra at_distance 1 {
-            do die;
+            do die; // 斑马死亡
+            // myself 指代的是执行 ask 命令的调用者，也就是这头狮子本身
+            // 每吃掉一只斑马，狮子增加 30 点能量
+            myself.energy <- myself.energy + 30; 
         }
     }
     
+    // 新增行为：当能量降至0或以下时，狮子死亡
+    reflex starve when: energy <= 0 {
+        do die;
+    }
+    
     aspect base {
-        // 修改为半径为 3 的圆形
         draw circle(3) color: #red border: #black;
     }
 }
 
 // 添加 moving 技能，使智能体能够移动
 species zebra skills: [moving] {
-    // Random initial location
     init {
         location <- any_location_in(world);
     }
@@ -74,17 +80,11 @@ species zebra skills: [moving] {
     
     // 行为：斑马吃草
     reflex eat {
-        // 获取斑马当前所处位置的草地网格单元
         grassland current_cell <- grassland(location);
         
-        // 如果该网格存在，且网格中的生物量大于0（有草）
         if (current_cell != nil and current_cell.biomass > 0) {
-            // 触发草被吃掉的逻辑：将该网格的生物量重置为0（无草状态）
             current_cell.biomass <- 0.0;
-            
-            // （可选）可以立即更新一下该网格的颜色为黑色，使其视觉反馈更及时
-            // 不加这句的话，草地的 grow reflex 也会在当前或下一帧自动更新颜色
-//            current_cell.color <- rgb(0, 0, 0); 
+            current_cell.color <- rgb(0, 0, 0); 
         }
     }
     
