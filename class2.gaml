@@ -33,7 +33,7 @@ grid grassland width: 50 height: 50 {
 
 // 添加 moving 技能，使智能体能够移动
 species lion skills: [moving] {
-    // 新增：狮子的初始能量（在30到50之间随机）
+    // 新增：狮子的初始能量（在2000到3500之间随机）
     int energy <- rnd(2000, 3500);
     
     init {
@@ -52,8 +52,8 @@ species lion skills: [moving] {
         ask zebra at_distance 1 {
             do die; // 斑马死亡
             // myself 指代的是执行 ask 命令的调用者，也就是这头狮子本身
-            // 每吃掉一只斑马，狮子增加 30 点能量
-            myself.energy <- myself.energy + 30; 
+            // 每吃掉一只斑马，狮子增加 300 点能量
+            myself.energy <- myself.energy + 300; 
         }
     }
     
