@@ -34,10 +34,19 @@ species cows skills: [moving] {
     }
 }
 
-// Black sheep at a random location
-species sheep {
+// Black sheep at a random location, walking south and bouncing at the edges
+species sheep skills: [moving] {
+    // Sheep speed per step
+    float speed <- 1.0;
+
     init {
         location <- any_location_in(world);
+        heading <- 90.0;
+    }
+
+    // Walk straight along the heading; move reverses it at the world edge
+    reflex move {
+        do move;
     }
 
     aspect base {
