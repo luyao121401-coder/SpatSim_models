@@ -15,10 +15,18 @@ global {
     }
 }
 
-// Brown cow at a random location
-species cows {
+// Brown cow at a random location, moving by correlated random walk
+species cows skills: [moving] {
+    // Cow speed per step
+    float speed <- 2.0;
+
     init {
         location <- any_location_in(world);
+    }
+
+    // Correlated random walk, up to 45 degrees either side of the heading
+    reflex move {
+        do wander amplitude: 90.0;
     }
 
     aspect base {
