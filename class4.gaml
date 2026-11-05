@@ -17,6 +17,15 @@ global {
     }
 }
 
+// Static grass cells covering the environment
+grid grassland width: 50 height: 50 {
+    // Grass amount, 0.0 to 10.0
+    float biomass <- rnd(0.0, 10.0);
+
+    // Cell colour, greener with more grass
+    rgb color <- rgb(0, int(255 * (biomass / 10.0)), 0);
+}
+
 // Brown cow at a random location, moving by correlated random walk
 species cows skills: [moving] {
     // Cow speed per step
@@ -39,7 +48,7 @@ species cows skills: [moving] {
     }
 
     aspect base {
-        draw square(1.0) color: #brown;
+        draw square(1.5) color: #brown;
     }
 
     aspect action_neighbourhood {
@@ -72,7 +81,7 @@ species sheep skills: [moving] {
     }
 
     aspect base {
-        draw circle(0.4) color: #black;
+        draw circle(0.6) color: #black;
     }
 
     aspect action_neighbourhood {
@@ -117,7 +126,7 @@ species goats skills: [moving] {
     }
 
     aspect base {
-        draw triangle(0.5) color: #yellow border: #black;
+        draw triangle(1.0) color: #yellow border: #black;
     }
 
     aspect action_neighbourhood {
@@ -130,6 +139,7 @@ species goats skills: [moving] {
 experiment class4_simulation type: gui {
     output {
         display map {
+            grid grassland border: #darkgreen;
             species cows aspect: base;
             species sheep aspect: base;
             species goats aspect: base;
