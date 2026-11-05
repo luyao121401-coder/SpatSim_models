@@ -7,6 +7,8 @@ global {
     int initial_sheep <- 3;
     // Number of goats at start
     int initial_goats <- 2;
+    // Transparency of action areas, 0 solid to 1 invisible
+    float area_transparency <- 0.7;
 
     init {
         create cows number: initial_cows;
@@ -19,6 +21,8 @@ global {
 species cows skills: [moving] {
     // Cow speed per step
     float speed <- 2.0;
+    // Space the cow can reach next step
+    geometry action_area;
 
     init {
         location <- any_location_in(world);
@@ -29,8 +33,19 @@ species cows skills: [moving] {
         do wander amplitude: 90.0;
     }
 
+    // Action area is a cone of radius speed around the heading
+    reflex update_action_area {
+        action_area <- circle(speed) intersection cone(heading - 45, heading + 45);
+    }
+
     aspect base {
         draw square(1.0) color: #brown;
+    }
+
+    aspect action_neighbourhood {
+        if (action_area != nil) {
+            draw action_area color: #brown;
+        }
     }
 }
 
@@ -38,6 +53,8 @@ species cows skills: [moving] {
 species sheep skills: [moving] {
     // Sheep speed per step
     float speed <- 1.0;
+    // Space the sheep can reach next step
+    geometry action_area;
 
     init {
         location <- any_location_in(world);
@@ -49,8 +66,19 @@ species sheep skills: [moving] {
         do move;
     }
 
+    // Action area is a line of length speed along the heading
+    reflex update_action_area {
+        action_area <- line(location, location + {speed * cos(heading), speed * sin(heading)});
+    }
+
     aspect base {
         draw circle(0.4) color: #black;
+    }
+
+    aspect action_neighbourhood {
+        if (action_area != nil) {
+            draw action_area + 0.15 color: #black;
+        }
     }
 }
 
@@ -62,6 +90,8 @@ species goats skills: [moving] {
     point start_point;
     // Steps left to walk back after bouncing at the origin
     int bounce_steps <- 0;
+    // Space the goat can reach next step
+    geometry action_area;
 
     init {
         location <- any_location_in(world);
@@ -81,8 +111,19 @@ species goats skills: [moving] {
         }
     }
 
+    // Action area is the line to the current target, cut to length speed
+    reflex update_action_area {
+        action_area <- line(location, bounce_steps > 0 ? start_point : {0, 0}) intersection circle(speed);
+    }
+
     aspect base {
         draw triangle(0.5) color: #yellow border: #black;
+    }
+
+    aspect action_neighbourhood {
+        if (action_area != nil) {
+            draw action_area + 0.15 color: #yellow;
+        }
     }
 }
 
@@ -92,6 +133,9 @@ experiment class4_simulation type: gui {
             species cows aspect: base;
             species sheep aspect: base;
             species goats aspect: base;
+            species cows aspect: action_neighbourhood transparency: area_transparency;
+            species sheep aspect: action_neighbourhood transparency: area_transparency;
+            species goats aspect: action_neighbourhood transparency: area_transparency;
         }
     }
 }
