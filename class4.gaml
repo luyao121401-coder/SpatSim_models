@@ -54,10 +54,31 @@ species sheep skills: [moving] {
     }
 }
 
-// Yellow goat at a random location
-species goats {
+// Yellow goat at a random location, walking to the origin and bouncing back
+species goats skills: [moving] {
+    // Goat speed per step
+    float speed <- 0.5;
+    // Where the goat started, used to walk back the way it came
+    point start_point;
+    // Steps left to walk back after bouncing at the origin
+    int bounce_steps <- 0;
+
     init {
         location <- any_location_in(world);
+        start_point <- location;
+    }
+
+    // Walk to the origin, then walk back the way it came for 10 steps
+    reflex move {
+        if (bounce_steps > 0) {
+            do goto target: start_point;
+            bounce_steps <- bounce_steps - 1;
+        } else {
+            do goto target: {0, 0};
+            if (location distance_to {0, 0} < 0.001) {
+                bounce_steps <- 10;
+            }
+        }
     }
 
     aspect base {
