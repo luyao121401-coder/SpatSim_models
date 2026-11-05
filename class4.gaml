@@ -30,7 +30,7 @@ species cows skills: [moving] {
     }
 
     aspect base {
-        draw circle(2) color: #brown;
+        draw square(1.0) color: #brown;
     }
 }
 
@@ -50,7 +50,7 @@ species sheep skills: [moving] {
     }
 
     aspect base {
-        draw circle(2) color: #black;
+        draw circle(0.4) color: #black;
     }
 }
 
@@ -82,7 +82,7 @@ species goats skills: [moving] {
     }
 
     aspect base {
-        draw circle(2) color: #yellow;
+        draw triangle(0.5) color: #yellow border: #black;
     }
 }
 
