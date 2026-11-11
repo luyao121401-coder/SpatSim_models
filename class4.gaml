@@ -17,15 +17,6 @@ global {
     }
 }
 
-// Static grass cells covering the environment
-grid grassland width: 50 height: 50 {
-    // Grass amount, 0.0 to 10.0
-    float biomass <- rnd(0.0, 10.0);
-
-    // Cell colour, greener with more grass
-    rgb color <- rgb(0, int(255 * (biomass / 10.0)), 0);
-}
-
 // Brown cow at a random location, moving by correlated random walk
 species cows skills: [moving] {
     // Cow speed per step
@@ -58,7 +49,7 @@ species cows skills: [moving] {
     }
 }
 
-// Black sheep at a random location, walking south and bouncing at the edges
+// Black sheep at a random location, walking south and stopping at the bottom edge
 species sheep skills: [moving] {
     // Sheep speed per step
     float speed <- 1.0;
@@ -70,9 +61,9 @@ species sheep skills: [moving] {
         heading <- 90.0;
     }
 
-    // Walk straight along the heading; move reverses it at the world edge
+    // Walk straight south to the bottom edge and stop there, no bounce
     reflex move {
-        do move;
+        do goto target: {location.x, world.shape.height};
     }
 
     // Action area is a line of length speed along the heading
@@ -91,38 +82,26 @@ species sheep skills: [moving] {
     }
 }
 
-// Yellow goat at a random location, walking to the origin and bouncing back
+// Yellow goat starting near the corner farthest from the origin, walking to the origin
 species goats skills: [moving] {
     // Goat speed per step
     float speed <- 0.5;
-    // Where the goat started, used to walk back the way it came
-    point start_point;
-    // Steps left to walk back after bouncing at the origin
-    int bounce_steps <- 0;
     // Space the goat can reach next step
     geometry action_area;
 
     init {
-        location <- any_location_in(world);
-        start_point <- location;
+        // First goat near the right edge, second near the bottom edge, so they do not overlap
+        location <- (int(self) = 0) ? {world.shape.width, world.shape.height - 5} : {world.shape.width - 5, world.shape.height};
     }
 
-    // Walk to the origin, then walk back the way it came for 10 steps
+    // Walk to the origin and stop there, no bounce
     reflex move {
-        if (bounce_steps > 0) {
-            do goto target: start_point;
-            bounce_steps <- bounce_steps - 1;
-        } else {
-            do goto target: {0, 0};
-            if (location distance_to {0, 0} < 0.001) {
-                bounce_steps <- 10;
-            }
-        }
+        do goto target: {0, 0};
     }
 
-    // Action area is the line to the current target, cut to length speed
+    // Action area is the line to the origin, cut to length speed
     reflex update_action_area {
-        action_area <- line(location, bounce_steps > 0 ? start_point : {0, 0}) intersection circle(speed);
+        action_area <- line(location, {0, 0}) intersection circle(speed);
     }
 
     aspect base {
@@ -139,7 +118,6 @@ species goats skills: [moving] {
 experiment class4_simulation type: gui {
     output {
         display map {
-            grid grassland border: #darkgreen;
             species cows aspect: base;
             species sheep aspect: base;
             species goats aspect: base;
