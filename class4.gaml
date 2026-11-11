@@ -39,7 +39,7 @@ species cows skills: [moving] {
     }
 
     aspect base {
-        draw square(1.5) color: #brown;
+        draw square(3.0) color: #brown;
     }
 
     aspect action_neighbourhood {
@@ -72,7 +72,7 @@ species sheep skills: [moving] {
     }
 
     aspect base {
-        draw circle(0.6) color: #black;
+        draw circle(1.2) color: #black;
     }
 
     aspect action_neighbourhood {
@@ -105,7 +105,7 @@ species goats skills: [moving] {
     }
 
     aspect base {
-        draw triangle(1.0) color: #yellow border: #black;
+        draw triangle(2.0) color: #yellow border: #black;
     }
 
     aspect action_neighbourhood {
