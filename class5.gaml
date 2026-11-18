@@ -13,6 +13,20 @@ global {
     float area_scale <- 4.0;
     // Larger display scale for goats, the slowest agents
     float goat_area_scale <- 10.0;
+    // Pool of all cow direction changes between -45 and 45 degrees, growing every step
+    list<float> cow_turn_angles <- [];
+
+    // Outline of the cow direction-change histogram as chart points: each 5 degree bin from -45 to 45 is drawn as
+    // a block (left edge, up to its count, across, back down), so the bars sit side by side on a numeric x axis
+    list<point> cow_turn_outline {
+        list<int> counts <- empty(cow_turn_angles) ? list_with(18, 0) : (distribution_of(cow_turn_angles, 18, -45, 45) at "values");
+        list<point> points <- [];
+        loop i from: 0 to: 17 {
+            float left <- -45.0 + 5.0 * i;
+            points <- points + [{left, 0}, {left, counts[i]}, {left + 5.0, counts[i]}, {left + 5.0, 0}];
+        }
+        return points;
+    }
 
     init {
         create cows number: initial_cows;
@@ -34,12 +48,19 @@ species cows skills: [moving] {
         location <- any_location_in(world);
     }
 
-    // Correlated random walk, up to 45 degrees either side of the heading; the first step's length is saved
+    // Correlated random walk, up to 45 degrees either side of the heading; the first step's length is saved,
+    // and each direction change (-180 to 180) is added to cow_turn_angles unless it is an edge turn-around
     reflex move {
         point previous_location <- location;
+        float previous_heading <- heading;
         do wander amplitude: 90.0;
         if (cycle = 0) {
             first_step_distance <- previous_location distance_to location;
+        }
+        float turn <- heading - previous_heading;
+        turn <- turn - 360 * floor((turn + 180) / 360);
+        if (abs(turn) <= 45) {
+            add turn to: cow_turn_angles;
         }
     }
 
@@ -171,6 +192,16 @@ experiment class5_simulation type: gui {
             chart "Mean distance travelled in the first step" type: scatter x_label: "Step" y_label: "Distance" {
                 data "Cows mean" value: (cows none_matches (each.first_step_distance < 0)) ? {1, mean(cows collect each.first_step_distance)} : nil color: #brown marker_shape: marker_circle;
                 data "Sheep mean" value: (sheep none_matches (each.first_step_distance < 0)) ? {1, mean(sheep collect each.first_step_distance)} : nil color: #black marker_shape: marker_circle;
+            }
+        }
+
+        // Goal 3: distribution of all cow direction changes so far, 18 bins of 5 degrees from -45 to 45 on a numeric x axis;
+        // lines are listed first so they are drawn on top of the brown bars; the 0 line reaches 15% above the highest bar
+        display cow_turn_histogram type:2d {
+            chart "Cows: distribution of direction changes" type: xy x_range: [-45, 45] x_tick_unit: 5 x_label: "Direction change (degrees)" y_label: "Count" {
+                data "0 degrees" value: [{0.0, 0.0}, {0.0, max(world.cow_turn_outline() collect each.y) * 1.15 + 1}] style: line color: #black thickness: 2.0 marker: false;
+                data "Bar edges" value: world.cow_turn_outline() style: line color: #black marker: false;
+                data "Cows direction changes" value: world.cow_turn_outline() style: area color: #brown marker: false;
             }
         }
     }
