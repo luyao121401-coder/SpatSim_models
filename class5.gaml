@@ -25,6 +25,8 @@ global {
 species cows skills: [moving] {
     // Cow speed per step
     float speed <- 2.0;
+    // Distance the cow travelled in the first step, -1 until that step is done
+    float first_step_distance <- -1.0;
     // Space the cow can reach next step
     geometry action_area;
 
@@ -32,9 +34,13 @@ species cows skills: [moving] {
         location <- any_location_in(world);
     }
 
-    // Correlated random walk, up to 45 degrees either side of the heading
+    // Correlated random walk, up to 45 degrees either side of the heading; the first step's length is saved
     reflex move {
+        point previous_location <- location;
         do wander amplitude: 90.0;
+        if (cycle = 0) {
+            first_step_distance <- previous_location distance_to location;
+        }
     }
 
     // Action area is a cone of radius speed around the heading, enlarged by area_scale
@@ -57,6 +63,8 @@ species cows skills: [moving] {
 species sheep skills: [moving] {
     // Sheep speed per step
     float speed <- 1.0;
+    // Distance the sheep travelled in the first step, -1 until that step is done
+    float first_step_distance <- -1.0;
     // Space the sheep can reach next step
     geometry action_area;
 
@@ -65,9 +73,13 @@ species sheep skills: [moving] {
         heading <- 90.0;
     }
 
-    // Walk straight south to the bottom edge and stop there, no bounce
+    // Walk straight south to the bottom edge and stop there, no bounce; the first step's length is saved
     reflex move {
+        point previous_location <- location;
         do goto target: {location.x, world.shape.height};
+        if (cycle = 0) {
+            first_step_distance <- previous_location distance_to location;
+        }
     }
     
 //    using do move
@@ -151,6 +163,14 @@ experiment class5_simulation type: gui {
                 data "Goat stops" value: (goats one_matches (each.arrival_step = cycle)) ? mean(goats collect each.total_distance) : nil
                     color: #black line_visible: false marker_shape: marker_circle marker_size: 2;
                 data "Goats mean" value: mean(goats collect each.total_distance) color: #yellow;
+            }
+        }
+
+        // Goal 2: mean distance travelled by cows and sheep in the first step
+        display first_step_chart type:2d {
+            chart "Mean distance travelled in the first step" type: scatter x_label: "Step" y_label: "Distance" {
+                data "Cows mean" value: (cows none_matches (each.first_step_distance < 0)) ? {1, mean(cows collect each.first_step_distance)} : nil color: #brown marker_shape: marker_circle;
+                data "Sheep mean" value: (sheep none_matches (each.first_step_distance < 0)) ? {1, mean(sheep collect each.first_step_distance)} : nil color: #black marker_shape: marker_circle;
             }
         }
     }
