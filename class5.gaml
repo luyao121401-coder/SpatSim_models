@@ -168,6 +168,9 @@ species goats skills: [moving] {
 
 experiment class5_simulation type: gui {
     output {
+        // Monitor 1: number of sheep that have not yet reached the south (bottom) edge
+        monitor "Sheep not yet at the south edge" value: sheep count (world.shape.height - each.location.y > 0.001);
+
         display map {
             species cows aspect: base;
             species sheep aspect: base;
