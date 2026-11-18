@@ -98,6 +98,8 @@ species goats skills: [moving] {
     float speed <- 0.5;
     // Total distance the goat has walked so far
     float total_distance <- 0.0;
+    // Step when the goat reached the origin, -1 while still walking
+    int arrival_step <- -1;
     // Space the goat can reach next step
     geometry action_area;
 
@@ -105,11 +107,14 @@ species goats skills: [moving] {
         location <- any_location_in(world);
     }
 
-    // Walk to the origin and stop there, adding each step's length to total_distance
+    // Walk to the origin and stop there, adding each step's length to total_distance and noting the arrival step
     reflex move when: location distance_to {0, 0} > 0.001 {
         point previous_location <- location;
         do goto target: {0, 0};
         total_distance <- total_distance + (previous_location distance_to location);
+        if (location distance_to {0, 0} <= 0.001) {
+            arrival_step <- cycle;
+        }
     }
 
     // Action area is the line to the origin, cut to length speed and enlarged by goat_area_scale; none once stopped
@@ -142,6 +147,9 @@ experiment class5_simulation type: gui {
         // Goal 1: mean total distance travelled by the goats over time
         display goat_distance_chart type:2d{
             chart "Goats: mean total distance travelled" type: series x_label: "Step" y_label: "Distance" {
+                // Dot only at the step a goat stops, so each change of stage is marked; listed first so it is drawn on top of the line
+                data "Goat stops" value: (goats one_matches (each.arrival_step = cycle)) ? mean(goats collect each.total_distance) : nil
+                    color: #black line_visible: false marker_shape: marker_circle marker_size: 2;
                 data "Goats mean" value: mean(goats collect each.total_distance) color: #yellow;
             }
         }
