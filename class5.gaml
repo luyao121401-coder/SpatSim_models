@@ -15,6 +15,16 @@ global {
     float goat_area_scale <- 10.0;
     // Pool of all cow direction changes between -45 and 45 degrees, growing every step
     list<float> cow_turn_angles <- [];
+    // Step in which each value of cow_turn_angles happened (1 = first step), same order as cow_turn_angles
+    list<int> cow_turn_steps <- [];
+    // Goats' mean total distance after each number of steps, as {steps done, mean}, the data of the goat chart
+    list<point> goat_distance_series <- [];
+    // Time stamp of this run, written in every results row so several runs in one file can be told apart
+    string run_id <- string(#now);
+    // Folder where the end results are saved (absolute, so GAMA does not put them in its own workspace)
+    string results_folder <- "E:/claude_workplace/SpatSim_models/results/";
+    // True once the end results are saved, so they are written only once
+    bool results_saved <- false;
 
     // Outline of the cow direction-change histogram as chart points: each 5 degree bin from -45 to 45 is drawn as
     // a block (left edge, up to its count, across, back down), so the bars sit side by side on a numeric x axis
@@ -26,6 +36,54 @@ global {
             points <- points + [{left, 0}, {left, counts[i]}, {left + 5.0, counts[i]}, {left + 5.0, 0}];
         }
         return points;
+    }
+
+    // Before the animals move, note the goats' mean total distance after the steps done so far (cycle = steps done)
+    reflex record_goat_distance {
+        add {cycle, mean(goats collect each.total_distance)} to: goat_distance_series;
+    }
+
+    // When every sheep is at the south edge and every goat at the origin, append the data behind each chart
+    // and the end state to CSV files in results_folder, then pause the simulation
+    reflex save_results when: !results_saved
+            and (sheep all_match (world.shape.height - each.location.y <= 0.001))
+            and (goats all_match (each.location distance_to {0, 0} <= 0.001)) {
+        // Chart 1: goats' mean total distance at every step
+        string rows <- file_exists(results_folder + "class5_goat_distance.csv") ? "" : "run,step,goat_mean_total_distance\n";
+        loop p over: goat_distance_series {
+            rows <- rows + run_id + "," + int(p.x) + "," + p.y + "\n";
+        }
+        save rows to: results_folder + "class5_goat_distance.csv" format: "text" rewrite: false;
+
+        // Chart 2: first-step distance of every cow and sheep, plus the two means shown in the chart
+        rows <- file_exists(results_folder + "class5_first_step.csv") ? "" : "run,species,animal,first_step_distance\n";
+        loop c over: cows {
+            rows <- rows + run_id + ",cows," + c.name + "," + c.first_step_distance + "\n";
+        }
+        rows <- rows + run_id + ",cows,mean," + mean(cows collect each.first_step_distance) + "\n";
+        loop s over: sheep {
+            rows <- rows + run_id + ",sheep," + s.name + "," + s.first_step_distance + "\n";
+        }
+        rows <- rows + run_id + ",sheep,mean," + mean(sheep collect each.first_step_distance) + "\n";
+        save rows to: results_folder + "class5_first_step.csv" format: "text" rewrite: false;
+
+        // Chart 3: every raw cow direction change with its step, so it can be binned again
+        rows <- file_exists(results_folder + "class5_cow_turns.csv") ? "" : "run,step,turn_angle\n";
+        if (!empty(cow_turn_angles)) {
+            loop i from: 0 to: length(cow_turn_angles) - 1 {
+                rows <- rows + run_id + "," + cow_turn_steps[i] + "," + cow_turn_angles[i] + "\n";
+            }
+        }
+        save rows to: results_folder + "class5_cow_turns.csv" format: "text" rewrite: false;
+
+        // End state: steps done and the two monitor values, which should both be 0
+        rows <- file_exists(results_folder + "class5_end_state.csv") ? "" : "run,end_step,sheep_not_at_south_edge,goats_not_at_origin\n";
+        rows <- rows + run_id + "," + cycle + "," + (sheep count (world.shape.height - each.location.y > 0.001)) + ","
+            + (goats count (each.location distance_to {0, 0} > 0.001)) + "\n";
+        save rows to: results_folder + "class5_end_state.csv" format: "text" rewrite: false;
+
+        results_saved <- true;
+        do pause;
     }
 
     init {
@@ -62,6 +120,7 @@ species cows skills: [moving] {
         turn <- turn - 360 * floor((turn + 180) / 360);
         if (abs(turn) <= 45) {
             add turn to: cow_turn_angles;
+            add cycle + 1 to: cow_turn_steps;
         }
     }
 
