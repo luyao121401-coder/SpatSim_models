@@ -19,8 +19,8 @@ global {
     list<int> cow_turn_steps <- [];
     // Goats' mean total distance after each number of steps, as {steps done, mean}, the data of the goat chart
     list<point> goat_distance_series <- [];
-    // Time stamp of this run, written in every results row so several runs in one file can be told apart
-    string run_id <- string(#now);
+    // Number of this run (1, 2, 3, ...), written in every results row; set when the results are saved
+    int run_number <- 0;
     // Folder where the end results are saved (absolute, so GAMA does not put them in its own workspace)
     string results_folder <- "E:/claude_workplace/SpatSim_models/results/";
     // True once the end results are saved, so they are written only once
@@ -48,37 +48,41 @@ global {
     reflex save_results when: !results_saved
             and (sheep all_match (world.shape.height - each.location.y <= 0.001))
             and (goats all_match (each.location distance_to {0, 0} <= 0.001)) {
+        // Run number: one more than the runs already in the end-state file (its lines minus the header), or 1 if there is no file yet
+        run_number <- file_exists(results_folder + "class5_end_state.csv")
+            ? length(text_file(results_folder + "class5_end_state.csv").contents where (each != "")) : 1;
+
         // Chart 1: goats' mean total distance at every step
         string rows <- file_exists(results_folder + "class5_goat_distance.csv") ? "" : "run,step,goat_mean_total_distance\n";
         loop p over: goat_distance_series {
-            rows <- rows + run_id + "," + int(p.x) + "," + p.y + "\n";
+            rows <- rows + run_number + "," + int(p.x) + "," + p.y + "\n";
         }
         save rows to: results_folder + "class5_goat_distance.csv" format: "text" rewrite: false;
 
         // Chart 2: first-step distance of every cow and sheep, plus the two means shown in the chart
         rows <- file_exists(results_folder + "class5_first_step.csv") ? "" : "run,species,animal,first_step_distance\n";
         loop c over: cows {
-            rows <- rows + run_id + ",cows," + c.name + "," + c.first_step_distance + "\n";
+            rows <- rows + run_number + ",cows," + c.name + "," + c.first_step_distance + "\n";
         }
-        rows <- rows + run_id + ",cows,mean," + mean(cows collect each.first_step_distance) + "\n";
+        rows <- rows + run_number + ",cows,mean," + mean(cows collect each.first_step_distance) + "\n";
         loop s over: sheep {
-            rows <- rows + run_id + ",sheep," + s.name + "," + s.first_step_distance + "\n";
+            rows <- rows + run_number + ",sheep," + s.name + "," + s.first_step_distance + "\n";
         }
-        rows <- rows + run_id + ",sheep,mean," + mean(sheep collect each.first_step_distance) + "\n";
+        rows <- rows + run_number + ",sheep,mean," + mean(sheep collect each.first_step_distance) + "\n";
         save rows to: results_folder + "class5_first_step.csv" format: "text" rewrite: false;
 
         // Chart 3: every raw cow direction change with its step, so it can be binned again
         rows <- file_exists(results_folder + "class5_cow_turns.csv") ? "" : "run,step,turn_angle\n";
         if (!empty(cow_turn_angles)) {
             loop i from: 0 to: length(cow_turn_angles) - 1 {
-                rows <- rows + run_id + "," + cow_turn_steps[i] + "," + cow_turn_angles[i] + "\n";
+                rows <- rows + run_number + "," + cow_turn_steps[i] + "," + cow_turn_angles[i] + "\n";
             }
         }
         save rows to: results_folder + "class5_cow_turns.csv" format: "text" rewrite: false;
 
         // End state: steps done and the two monitor values, which should both be 0
         rows <- file_exists(results_folder + "class5_end_state.csv") ? "" : "run,end_step,sheep_not_at_south_edge,goats_not_at_origin\n";
-        rows <- rows + run_id + "," + cycle + "," + (sheep count (world.shape.height - each.location.y > 0.001)) + ","
+        rows <- rows + run_number + "," + cycle + "," + (sheep count (world.shape.height - each.location.y > 0.001)) + ","
             + (goats count (each.location distance_to {0, 0} > 0.001)) + "\n";
         save rows to: results_folder + "class5_end_state.csv" format: "text" rewrite: false;
 
