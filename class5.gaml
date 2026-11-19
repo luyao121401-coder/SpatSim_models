@@ -45,7 +45,8 @@ species cows skills: [moving] {
     geometry action_area;
 
     init {
-        location <- any_location_in(world);
+        // Start at least one step (speed) from every edge, so the first step never hits the edge and is always speed long
+        location <- {rnd(speed, world.shape.width - speed), rnd(speed, world.shape.height - speed)};
     }
 
     // Correlated random walk, up to 45 degrees either side of the heading; the first step's length is saved,
@@ -192,9 +193,9 @@ experiment class5_simulation type: gui {
             }
         }
 
-        // Goal 2: mean distance travelled by cows and sheep in the first step
+        // Goal 2: mean distance travelled by cows and sheep in the first step; x axis fixed around 1 so it shows a single tick "1"
         display first_step_chart type:2d {
-            chart "Mean distance travelled in the first step" type: scatter x_label: "Step" y_label: "Distance" {
+            chart "Mean distance travelled in the first step" type: scatter x_range: [0.5, 1.5] x_tick_unit: 1 x_label: "Step" y_label: "Distance" {
                 data "Cows mean" value: (cows none_matches (each.first_step_distance < 0)) ? {1, mean(cows collect each.first_step_distance)} : nil color: #brown marker_shape: marker_circle;
                 data "Sheep mean" value: (sheep none_matches (each.first_step_distance < 0)) ? {1, mean(sheep collect each.first_step_distance)} : nil color: #black marker_shape: marker_circle;
             }
